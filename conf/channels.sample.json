@@ -1,0 +1,37 @@
+[
+  {
+    "platform": "RenrenStatus",
+    "methods": "home_timeline,update,forward,reply",
+    "user_id": "",
+    "user_name": "",
+    "channel_name": "myrenren",
+    "auth_info": {
+      "save_token_file": "(default)",
+      "cmd_request_url": "(default)",
+      "callback_url": "http://snsapi.ie.cuhk.edu.hk/aux/auth.php",
+      "cmd_fetch_code": "(default)"
+    },
+    "app_secret": "*** PLACEHOLDER ***",
+    "app_key": "*** PLACEHOLDER ***",
+    "open": "yes",
+    "home_timeline":{
+      "count": 20
+    }
+  },
+  {
+    "platform": "SinaWeiboStatus",
+    "methods": "",
+    "user_id": "",
+    "user_name": "",
+    "channel_name": "sinaweibo",
+    "app_secret": "*** PLACEHOLDER ***",
+    "app_key": "*** PLACEHOLDER ***",
+    "open": "yes",
+    "auth_info": {
+      "save_token_file": "(default)",
+      "callback_url": "http://snsapi.sinaapp.com/auth.php",
+      "cmd_fetch_code": "(default)",
+      "cmd_request_url": "(default)"
+    }
+  }
+]

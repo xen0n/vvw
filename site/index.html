@@ -8,10 +8,210 @@
   <link rel="stylesheet" href="static/reset.css" />
   <link rel="stylesheet" href="static/clear.css" />
 
-  <script src="static/d3.v3.js"></script>
+  <script src="//static.jnrain.com/common/js/config.js"></script>
+  <script src="//static.jnrain.com/common/js/require.js"></script>
+
+  <style>
+html {
+  background: #262626;
+}
+
+#statusContainer {
+  width: 75%;
+  min-width: 960px;
+  margin: 0 auto;
+}
+
+#statuses {
+  background: rgba(215, 24, 120, 0.5);
+}
+
+#statuses>.status-item-alt {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+#statuses>.status-item {
+  padding: 10px;
+  color: #fff;
+  min-height: 100px;
+  position: relative;
+}
+
+.status-item>.status-metadata {
+  padding: 0 0 20px;
+}
+
+.status-item>.status-metadata>.stat-username {
+  font-size: 125%;
+}
+
+.status-item>.status-metadata>.stat-time {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.status-item>.status-text {
+  display: block;
+  width: 80%;
+  margin: 0 auto;
+}
+  </style>
 </head>
 <body>
+  <div id="app">
+    <div id="statusContainer">
+      <div id="statuses" ng-controller="StatusScreen">
+        <article class="status-item" ng-class="{ 'status-item-alt': $index % 2 != 0 }" ng-repeat="msg in timeline.items">
+          <header class="status-metadata">
+            <span class="stat-username">{{msg.username}}</span>
+            <span class="stat-time">{{formatTime(msg.time)}}</span>
+            <span class="stat-type">来自{{formatPlatform(msg.platform)}}</span>
+          </header>
+          <p class="status-text">{{msg.text}}</p>
 
+          <section class="status-replies">
+            <div class="status-reply" ng-repeat="rep in msg.comments">
+              <span class="reply-username">{{rep.name}}</span>
+              <span class="reply-time">{{rep.time}}</span>
+              <p class="reply-body">{{rep.text.substring(1, rep.text.length - 1)}}</p>
+            </div>
+          </section>
+
+          <section class="status-actions">
+            <div class="status-replyform">
+              <form action="/v1/replyto/{{msg.platform}}/{{msg.replyData.id}}/{{msg.replyData.uid}}/" method="POST">
+                <input type="text" name="content" />
+                <input type="submit" value="发表回复" />
+              </form>
+            </div>
+          </section>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function() {
+  'use strict';
+
+  requirejs(
+    ['angular'],
+    function(angular) {
+      var mod = angular.module('vvw-main', []);
+      var StatusScreen = (function($scope, $http, $timeout) {
+        var REFRESH_TIME_INTERVAL = 60000;
+
+        console.log($scope);
+
+        $scope.formatPlatform = (function(s) {
+          if (s == 'RenrenStatus')
+            return '人人状态';
+          if (s == 'RenrenBlog')
+            return '人人日志';
+          if (s == 'RenrenShare')
+            return '人人分享';
+          if (s == 'SinaWeiboStatus')
+            return '新浪微博';
+
+          return s;
+          });
+
+        $scope.getCurrentTime = (function() {
+          return Math.floor(new Date().getTime() / 1000);
+          });
+
+        $scope.formatTime = (function(time) {
+          var delta = $scope.currTime - time;
+
+          if (delta < 60) {
+            return delta + ' 秒前';
+          }
+
+          if (delta < 3600) {
+            return '约 ' + Math.floor(delta / 60) + ' 分钟前';
+          }
+
+          if (delta < 86400) {
+            return '约 ' + Math.floor(delta / 3600) + ' 小时前';
+          }
+
+          return Math.floor(delta / 86400) + ' 天前';
+          });
+
+        $scope.timeRefreshTimer = (function() {
+            $scope.currTime = $scope.getCurrentTime();
+            $timeout($scope.timeRefreshTimer, REFRESH_TIME_INTERVAL);
+            });
+        $scope.timeRefreshTimer();
+
+        $scope.timeline = [];
+
+        $http.get('/v1/timeline/')
+          .success(function(data, status) {
+            console.log('got timeline:', data);
+
+            $scope.timeline = data;
+            //data.items.forEach(function(item) {
+            //  $scope.timeline.push(item);
+            //  });
+            })
+          .error(function(data, status) {
+            console.log('error retrieving timeline:', status);
+            });
+          /*
+        $scope.timeline = {
+          "items":[
+            {
+              "username":"\u718a\u5149GF_NYC",
+              "text_trace":"\u8f6c\u81ea\u8499\u6b4c: \u5f88\u590d\u6742\u7684\u5fc3\u60c5\u8f6c\u8f7dLZ\u8fd9\u3002\u8f6c\u81ea\u76db\u9e4f\u8f89:\u7b2c\u4e00\u6b21\u5f53\u9762\u8bd5\u5b98\uff0c\u89c9\u5f97\u957f\u76f8\u771f\u7684\u5f88\u91cd\u8981\uff0c\u4ee5\u53ca\u9762\u8bd5\u8005\u7740\u88c5\u54c1\u5473\uff0c\u4e2a\u4eba\u6c14\u573a\u548c\u968f\u673a\u5e94\u53d8\u89e3\u51b3\u7a81\u53d1\u4e8b\u4ef6\u80fd\u529b\uff0c\u8bf4\u8bdd\u65b9\u5f0f\uff0c\u8bed\u8a00\u8c08\u5410\uff0c\u8868\u8fbe\u80fd\u529b\uff0c\u80a2\u4f53\u52a8\u4f5c\uff0c\u9762\u90e8\u795e\u6001\u90fd\u662f\u5728\u77ed\u6682\u6709\u9650\u65f6\u95f4\u548c\u4f17\u591a\u7ade\u4e89\u8005\u4e2d\u8131\u9896\u800c\u51fa\u7684\u5173\u952e\u56e0\u7d20\u3002",
+              "attachments":[],
+              "reposts_count":"N\/A",
+              "text":"\u8f6c\u81ea\u8499\u6b4c: \u5f88\u590d\u6742\u7684\u5fc3\u60c5\u8f6c\u8f7dLZ\u8fd9\u3002\u8f6c\u81ea\u76db\u9e4f\u8f89:\u7b2c\u4e00\u6b21\u5f53\u9762\u8bd5\u5b98\uff0c\u89c9\u5f97\u957f\u76f8\u771f\u7684\u5f88\u91cd\u8981\uff0c\u4ee5\u53ca\u9762\u8bd5\u8005\u7740\u88c5\u54c1\u5473\uff0c\u4e2a\u4eba\u6c14\u573a\u548c\u968f\u673a\u5e94\u53d8\u89e3\u51b3\u7a81\u53d1\u4e8b\u4ef6\u80fd\u529b\uff0c\u8bf4\u8bdd\u65b9\u5f0f\uff0c\u8bed\u8a00\u8c08\u5410\uff0c\u8868\u8fbe\u80fd\u529b\uff0c\u80a2\u4f53\u52a8\u4f5c\uff0c\u9762\u90e8\u795e\u6001\u90fd\u662f\u5728\u77ed\u6682\u6709\u9650\u65f6\u95f4\u548c\u4f17\u591a\u7ade\u4e89\u8005\u4e2d\u8131\u9896\u800c\u51fa\u7684\u5173\u952e\u56e0\u7d20\u3002 || @\u76db\u9e4f\u8f89 : \u7b2c\u4e00\u6b21\u5f53\u9762\u8bd5\u5b98\uff0c\u89c9\u5f97\u957f\u76f8\u771f\u7684\u5f88\u91cd\u8981\uff0c\u4ee5\u53ca\u9762\u8bd5\u8005\u7740\u88c5\u54c1\u5473\uff0c\u4e2a\u4eba\u6c14\u573a\u548c\u968f\u673a\u5e94\u53d8\u89e3\u51b3\u7a81\u53d1\u4e8b\u4ef6\u80fd\u529b\uff0c\u8bf4\u8bdd\u65b9\u5f0f\uff0c\u8bed\u8a00\u8c08\u5410\uff0c\u8868\u8fbe\u80fd\u529b\uff0c\u80a2\u4f53\u52a8\u4f5c\uff0c\u9762\u90e8\u795e\u6001\u90fd\u662f\u5728\u77ed\u6682\u6709\u9650\u65f6\u95f4\u548c\u4f17\u591a\u7ade\u4e89\u8005\u4e2d\u8131\u9896\u800c\u51fa\u7684\u5173\u952e\u56e0\u7d20\u3002",
+              "topics":["\u6c14\u573a","\u9762\u8bd5\u5b98","\u8868\u8fbe\u80fd\u529b","\u8c08\u5410","\u7740\u88c5"],
+              "userid":"329169698",
+              "comments_count":0,
+              "time":1382676747,
+              "text_orig":"\u7b2c\u4e00\u6b21\u5f53\u9762\u8bd5\u5b98\uff0c\u89c9\u5f97\u957f\u76f8\u771f\u7684\u5f88\u91cd\u8981\uff0c\u4ee5\u53ca\u9762\u8bd5\u8005\u7740\u88c5\u54c1\u5473\uff0c\u4e2a\u4eba\u6c14\u573a\u548c\u968f\u673a\u5e94\u53d8\u89e3\u51b3\u7a81\u53d1\u4e8b\u4ef6\u80fd\u529b\uff0c\u8bf4\u8bdd\u65b9\u5f0f\uff0c\u8bed\u8a00\u8c08\u5410\uff0c\u8868\u8fbe\u80fd\u529b\uff0c\u80a2\u4f53\u52a8\u4f5c\uff0c\u9762\u90e8\u795e\u6001\u90fd\u662f\u5728\u77ed\u6682\u6709\u9650\u65f6\u95f4\u548c\u4f17\u591a\u7ade\u4e89\u8005\u4e2d\u8131\u9896\u800c\u51fa\u7684\u5173\u952e\u56e0\u7d20\u3002",
+              "username_orig":"\u76db\u9e4f\u8f89"
+            },
+            {
+              "username":"\u6c64\u654f",
+              "text_trace":"\u539f\u6765\u201c\u601d\u5bc6\u8fbe\u201d\u662f\u5bf9\u957f\u8f88\u8bf4\u8bdd\u65f6\u8868\u5c0a\u656c\u7684\u8bed\u6c14\u8bcd\u3002\u5c31\u8ddf\u5317\u4eac\u4eba\u8bf4\u201c\u60a8\u201d\u4e00\u6837\u3002",
+              "attachments":[],
+              "reposts_count":"N\/A",
+              "text":"\u539f\u6765\u201c\u601d\u5bc6\u8fbe\u201d\u662f\u5bf9\u957f\u8f88\u8bf4\u8bdd\u65f6\u8868\u5c0a\u656c\u7684\u8bed\u6c14\u8bcd\u3002\u5c31\u8ddf\u5317\u4eac\u4eba\u8bf4\u201c\u60a8\u201d\u4e00\u6837\u3002",
+              "topics":["\u8bed\u6c14\u8bcd","\u65f6\u8868","\u601d\u5bc6\u8fbe","\u957f\u8f88","\u5c0a\u656c"],
+              "userid":"350327857",
+              "comments_count":0,
+              "time":1382676740
+            },
+            {
+              "username":"\u91d1\u6770\u592b",
+              "text_trace":"\u534e\u79d1\u7684\u8ba1\u9662\u7684\u7269\u7406\u8001\u5e08\u4eca\u513f\u4e2a\u4e0a\u5348\u521a\u6279\u4e86\u6211\u4eec\u4e00\u987f= =\u5929\u4e0b\u8ba1\u9662\u4e00\u5bb6\u4eb2(\u56e7)\u8f6c\u81ea\u6f58\u5b89\u4ec1.ksp: \u9ad8\u6570\u8fd8\u662f\u5f97\u597d\u597d\u5b66\u7684\u3002\u3002\u4ee5\u540e\u7528\u5f97\u7740\u3002\u8f6c\u81ea\u5218\u5dcd: (\u5c34\u5c2c)(\u5c34\u5c2c)\u8f6c\u81ea\u4f55\u81ea\u654f: \u8f6c\u81ea\u5434\u79d1\u6657: (\u5c34\u5c2c)(\u5c34\u5c2c)\u8f6c\u81ea\u8d75\u5065:\u4e0a\u5348\u548c\u9648\u7aef\u76f4\u8001\u5e08\u51b2\u5230\u9ad8\u6570\u8bfe\u5802\u4e0a\u70b9\u4e86\u4e2a\u540d\uff0c\u9ad8\u6570\u8001\u5e08\u8bf4\uff0c\u8981\u628a\u8ba1\u7b97\u673a\u5b66\u9662\u7684\u5b66\u98ce\u6293\u8d77\u6765\u975e\u5f97\u4e0b\u5927\u529b\u6c14\u624d\u884c\u2014\u2014\u8ba1\u7b97\u673a\u5b66\u9662\u5728\u5404\u57fa\u7840\u8bfe\u8001\u5e08\u5f53\u4e2d\u77e5\u540d\u5ea6\u5f88\u5927\u7684\u554a\u3002",
+              "attachments":[],
+              "reposts_count":"N\/A",
+              "text":"\u534e\u79d1\u7684\u8ba1\u9662\u7684\u7269\u7406\u8001\u5e08\u4eca\u513f\u4e2a\u4e0a\u5348\u521a\u6279\u4e86\u6211\u4eec\u4e00\u987f= =\u5929\u4e0b\u8ba1\u9662\u4e00\u5bb6\u4eb2(\u56e7)\u8f6c\u81ea\u6f58\u5b89\u4ec1.ksp: \u9ad8\u6570\u8fd8\u662f\u5f97\u597d\u597d\u5b66\u7684\u3002\u3002\u4ee5\u540e\u7528\u5f97\u7740\u3002\u8f6c\u81ea\u5218\u5dcd: (\u5c34\u5c2c)(\u5c34\u5c2c)\u8f6c\u81ea\u4f55\u81ea\u654f: \u8f6c\u81ea\u5434\u79d1\u6657: (\u5c34\u5c2c)(\u5c34\u5c2c)\u8f6c\u81ea\u8d75\u5065:\u4e0a\u5348\u548c\u9648\u7aef\u76f4\u8001\u5e08\u51b2\u5230\u9ad8\u6570\u8bfe\u5802\u4e0a\u70b9\u4e86\u4e2a\u540d\uff0c\u9ad8\u6570\u8001\u5e08\u8bf4\uff0c\u8981\u628a\u8ba1\u7b97\u673a\u5b66\u9662\u7684\u5b66\u98ce\u6293\u8d77\u6765\u975e\u5f97\u4e0b\u5927\u529b\u6c14\u624d\u884c\u2014\u2014\u8ba1\u7b97\u673a\u5b66\u9662\u5728\u5404\u57fa\u7840\u8bfe\u8001\u5e08\u5f53\u4e2d\u77e5\u540d\u5ea6\u5f88\u5927\u7684\u554a\u3002 || @\u8d75\u5065 : \u4e0a\u5348\u548c\u9648\u7aef\u76f4\u8001\u5e08\u51b2\u5230\u9ad8\u6570\u8bfe\u5802\u4e0a\u70b9\u4e86\u4e2a\u540d\uff0c\u9ad8\u6570\u8001\u5e08\u8bf4\uff0c\u8981\u628a\u8ba1\u7b97\u673a\u5b66\u9662\u7684\u5b66\u98ce\u6293\u8d77\u6765\u975e\u5f97\u4e0b\u5927\u529b\u6c14\u624d\u884c\u2014\u2014\u8ba1\u7b97\u673a\u5b66\u9662\u5728\u5404\u57fa\u7840\u8bfe\u8001\u5e08\u5f53\u4e2d\u77e5\u540d\u5ea6\u5f88\u5927\u7684\u554a\u3002",
+              "topics":["\u9ad8\u6570","\u8f6c\u81ea","\u8001\u5e08","\u5c34\u5c2c","\u8ba1\u7b97\u673a"],
+              "userid":"471685462",
+              "comments_count":0,
+              "time":1382675980,
+              "text_orig":"\u4e0a\u5348\u548c\u9648\u7aef\u76f4\u8001\u5e08\u51b2\u5230\u9ad8\u6570\u8bfe\u5802\u4e0a\u70b9\u4e86\u4e2a\u540d\uff0c\u9ad8\u6570\u8001\u5e08\u8bf4\uff0c\u8981\u628a\u8ba1\u7b97\u673a\u5b66\u9662\u7684\u5b66\u98ce\u6293\u8d77\u6765\u975e\u5f97\u4e0b\u5927\u529b\u6c14\u624d\u884c\u2014\u2014\u8ba1\u7b97\u673a\u5b66\u9662\u5728\u5404\u57fa\u7840\u8bfe\u8001\u5e08\u5f53\u4e2d\u77e5\u540d\u5ea6\u5f88\u5927\u7684\u554a\u3002",
+            "username_orig":"\u8d75\u5065"
+            }
+            ]};
+            */
+
+        return $scope;
+        });
+
+      StatusScreen.$inject = ['$scope', '$http', '$timeout'];
+      mod.controller('StatusScreen', StatusScreen);
+
+      angular.bootstrap(angular.element('#app'), ['vvw-main']);
+    });
+})();
+  </script>
 </body>
 <!-- vim:set ai et ts=2 sw=2 sts=2 fenc=utf-8: -->
 </html>

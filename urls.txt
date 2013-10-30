@@ -1,0 +1,11 @@
+--exact
+--renderer=json
+
+/v1/:
+	--regex
+	^timeline/$ timeline
+	^replyto/([A-Za-z]+)/(?P<id>\d+)/(?P<uid>\d+)/$ reply
+
+"":
+	--regex
+	^(.*)$ staticfile null

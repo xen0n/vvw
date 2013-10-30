@@ -34,7 +34,24 @@ def get_timeline(pocket):
 
 def get_parsed(l):
     for item in l:
-        yield item['parsed']
+        result = item['parsed'].copy()
+
+        platform = result['platform'] = item['ID']['platform']
+        if platform == 'RenrenStatus':
+            comments = item['raw']['comments']
+            result['comments'] = [] if comments['count'] == 0 else comments['comment']
+
+            # TODO: comment on comments
+            # only reply to status itself for now
+            result['replyData'] = {
+                    'id': item['ID'].status_id,
+                    'uid': item['ID'].source_user_id,
+                    }
+        else:
+            # catch-all
+            result['comments'] = []
+
+        yield result
 
 
 def preprocess_item(item):

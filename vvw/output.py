@@ -3,17 +3,10 @@
 
 from __future__ import unicode_literals, division
 
-try:
-    import ujson as json
-except ImportError:
-    import json
-
 from .pocket import get_pocket
 from . import op
-from .utils import json_encoded
 
 
-@json_encoded
 def generate_vvw_timeline():
     pocket = get_pocket()
     line = op.get_timeline(pocket)
